@@ -4,6 +4,7 @@ import com.cargofy.backend.dto.CreateShipmentRequest;
 import com.cargofy.backend.dto.ShipmentDetailResponse;
 import com.cargofy.backend.dto.ShipmentResponse;
 import com.cargofy.backend.dto.StatusHistoryResponse;
+import com.cargofy.backend.dto.UpdateStatusRequest;
 import com.cargofy.backend.model.Shipment;
 import com.cargofy.backend.model.ShipmentStatus;
 import com.cargofy.backend.model.StatusHistory;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -115,6 +118,29 @@ public class ShipmentController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest request) {
+        Shipment shipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shipment not found"));
+
+        shipment.setStatus(request.getStatus());
+        shipmentRepository.save(shipment);
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User updatedBy = userRepository.findByEmail(currentUserEmail).orElse(null);
+
+        StatusHistory history = new StatusHistory();
+        history.setShipment(shipment);
+        history.setStatus(request.getStatus());
+        history.setUpdatedDate(LocalDateTime.now());
+        history.setUpdatedBy(updatedBy);
+        history.setNote(request.getNote());
+        statusHistoryRepository.save(history);
+
+        return ResponseEntity.ok(toShipmentResponse(shipment));
     }
 
     private ShipmentResponse toShipmentResponse(Shipment shipment) {
