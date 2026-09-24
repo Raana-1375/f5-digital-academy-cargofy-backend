@@ -8,11 +8,16 @@ import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.ShipmentRepository;
 import com.cargofy.backend.repository.UserRepository;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/shipments")
@@ -50,7 +55,29 @@ public class ShipmentController {
 
         shipmentRepository.save(shipment);
 
-        ShipmentResponse response = new ShipmentResponse(
+        return ResponseEntity.ok(toShipmentResponse(shipment));
+    }
+
+    @GetMapping
+    public ResponseEntity<?> listShipments(
+            @RequestParam(required = false) ShipmentStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Shipment> shipments = (status != null)
+                ? shipmentRepository.findByStatus(status, pageable)
+                : shipmentRepository.findAll(pageable);
+
+        List<ShipmentResponse> response = shipments.getContent().stream()
+                .map(this::toShipmentResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    private ShipmentResponse toShipmentResponse(Shipment shipment) {
+        return new ShipmentResponse(
                 shipment.getId(),
                 shipment.getTrackingNumber(),
                 shipment.getOrigin(),
@@ -61,7 +88,5 @@ public class ShipmentController {
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
                 shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null
         );
-
-        return ResponseEntity.ok(response);
     }
 }
