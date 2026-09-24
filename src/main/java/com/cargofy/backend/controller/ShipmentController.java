@@ -1,11 +1,15 @@
 package com.cargofy.backend.controller;
 
 import com.cargofy.backend.dto.CreateShipmentRequest;
+import com.cargofy.backend.dto.ShipmentDetailResponse;
 import com.cargofy.backend.dto.ShipmentResponse;
+import com.cargofy.backend.dto.StatusHistoryResponse;
 import com.cargofy.backend.model.Shipment;
 import com.cargofy.backend.model.ShipmentStatus;
+import com.cargofy.backend.model.StatusHistory;
 import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.ShipmentRepository;
+import com.cargofy.backend.repository.StatusHistoryRepository;
 import com.cargofy.backend.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -25,10 +29,14 @@ public class ShipmentController {
 
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
+    private final StatusHistoryRepository statusHistoryRepository;
 
-    public ShipmentController(ShipmentRepository shipmentRepository, UserRepository userRepository) {
+    public ShipmentController(ShipmentRepository shipmentRepository,
+                               UserRepository userRepository,
+                               StatusHistoryRepository statusHistoryRepository) {
         this.shipmentRepository = shipmentRepository;
         this.userRepository = userRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
     }
 
     @PostMapping
@@ -72,6 +80,39 @@ public class ShipmentController {
         List<ShipmentResponse> response = shipments.getContent().stream()
                 .map(this::toShipmentResponse)
                 .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getShipmentDetail(@PathVariable Long id) {
+        Shipment shipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shipment not found"));
+
+        List<StatusHistory> history = statusHistoryRepository
+                .findByShipmentIdOrderByUpdatedDateAsc(id);
+
+        List<StatusHistoryResponse> historyResponse = history.stream()
+                .map(h -> new StatusHistoryResponse(
+                        h.getStatus().name(),
+                        h.getUpdatedDate(),
+                        h.getUpdatedBy() != null ? h.getUpdatedBy().getName() : null,
+                        h.getNote()
+                ))
+                .collect(Collectors.toList());
+
+        ShipmentDetailResponse response = new ShipmentDetailResponse(
+                shipment.getId(),
+                shipment.getTrackingNumber(),
+                shipment.getOrigin(),
+                shipment.getDestination(),
+                shipment.getStatus().name(),
+                shipment.getCreatedDate(),
+                shipment.getEstimatedDelivery(),
+                shipment.getClient() != null ? shipment.getClient().getName() : null,
+                shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
+                historyResponse
+        );
 
         return ResponseEntity.ok(response);
     }
