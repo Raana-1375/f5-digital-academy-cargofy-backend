@@ -3,8 +3,10 @@ package com.cargofy.backend.service;
 import com.cargofy.backend.dto.AuthResponse;
 import com.cargofy.backend.dto.LoginRequest;
 import com.cargofy.backend.dto.RegisterRequest;
+import com.cargofy.backend.exception.BadRequestException;
 import com.cargofy.backend.exception.ConflictException;
 import com.cargofy.backend.exception.ResourceNotFoundException;
+import com.cargofy.backend.model.Role;
 import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.UserRepository;
 import com.cargofy.backend.security.JwtService;
@@ -33,6 +35,10 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
+        if (request.getRole() == Role.ADMIN) {
+            throw new BadRequestException("Admin accounts cannot be created through registration");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("Email is already in use");
         }
