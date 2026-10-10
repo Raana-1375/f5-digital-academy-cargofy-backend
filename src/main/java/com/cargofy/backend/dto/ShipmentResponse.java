@@ -20,4 +20,5 @@ public class ShipmentResponse {
     private LocalDateTime estimatedDelivery;
     private String clientName;
     private String assignedOperatorName;
+    private String note;
 }
