@@ -47,6 +47,7 @@ public class ShipmentService {
         shipment.setStatus(ShipmentStatus.PREPARING);
         shipment.setCreatedDate(LocalDateTime.now());
         shipment.setEstimatedDelivery(request.getEstimatedDelivery());
+        shipment.setNote(request.getNote());
 
         if (request.getClientId() != null) {
             User client = userRepository.findById(request.getClientId())
@@ -102,6 +103,7 @@ public class ShipmentService {
                 shipment.getEstimatedDelivery(),
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
                 shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
+                shipment.getNote(),
                 historyResponse
         );
     }
@@ -127,7 +129,7 @@ public class ShipmentService {
         return toShipmentResponse(shipment);
     }
 
-       private ShipmentResponse toShipmentResponse(Shipment shipment) {
+    private ShipmentResponse toShipmentResponse(Shipment shipment) {
         return new ShipmentResponse(
                 shipment.getId(),
                 shipment.getTrackingNumber(),
@@ -137,7 +139,8 @@ public class ShipmentService {
                 shipment.getCreatedDate(),
                 shipment.getEstimatedDelivery(),
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
-                shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null
+                shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
+                shipment.getNote()
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.cargofy.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public class CreateShipmentRequest {
     private Long assignedOperatorId;
 
     private LocalDateTime estimatedDelivery;
-
+    
+    @Size(max = 300, message = "Note must be at most 300 characters")
     private String note;
 }
