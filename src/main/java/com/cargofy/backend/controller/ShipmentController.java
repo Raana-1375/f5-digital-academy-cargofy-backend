@@ -24,7 +24,8 @@ public class ShipmentController {
         this.shipmentService = shipmentService;
     }
 
-    @PostMapping
+        @PostMapping
+    @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
     public ResponseEntity<ShipmentResponse> createShipment(@Valid @RequestBody CreateShipmentRequest request) {
         return ResponseEntity.ok(shipmentService.createShipment(request));
     }
