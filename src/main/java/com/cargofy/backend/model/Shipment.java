@@ -34,6 +34,9 @@ public class Shipment {
     private LocalDateTime createdDate;
 
     private LocalDateTime estimatedDelivery;
+    
+    @Column(length = 300)
+    private String note;
 
     @ManyToOne
     @JoinColumn(name = "client_id")
