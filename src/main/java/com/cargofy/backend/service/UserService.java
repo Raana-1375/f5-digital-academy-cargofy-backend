@@ -3,11 +3,13 @@ package com.cargofy.backend.service;
 import com.cargofy.backend.dto.ChangePasswordRequest;
 import com.cargofy.backend.dto.UpdateProfileResponse;
 import com.cargofy.backend.dto.UpdateUserRequest;
+import com.cargofy.backend.dto.UserOptionResponse;
 import com.cargofy.backend.dto.UserResponse;
 import com.cargofy.backend.exception.BadRequestException;
 import com.cargofy.backend.exception.ConflictException;
 import com.cargofy.backend.exception.ForbiddenException;
 import com.cargofy.backend.exception.ResourceNotFoundException;
+import com.cargofy.backend.model.Role;
 import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.UserRepository;
 import com.cargofy.backend.security.CustomUserDetailsService;
@@ -15,6 +17,8 @@ import com.cargofy.backend.security.JwtService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UserService {
@@ -77,6 +81,12 @@ public class UserService {
 
         currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(currentUser);
+    }
+
+        public List<UserOptionResponse> listUsersByRole(Role role) {
+        return userRepository.findByRole(role).stream()
+                .map(user -> new UserOptionResponse(user.getId(), user.getName(), user.getCompanyName()))
+                .toList();
     }
 
     private UserResponse toUserResponse(User user) {
