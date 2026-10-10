@@ -21,5 +21,6 @@ public class ShipmentDetailResponse {
     private LocalDateTime estimatedDelivery;
     private String clientName;
     private String assignedOperatorName;
+    private String note;
     private List<StatusHistoryResponse> history;
 }
