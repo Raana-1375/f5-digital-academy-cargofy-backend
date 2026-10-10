@@ -3,11 +3,17 @@ package com.cargofy.backend.controller;
 import com.cargofy.backend.dto.ChangePasswordRequest;
 import com.cargofy.backend.dto.UpdateProfileResponse;
 import com.cargofy.backend.dto.UpdateUserRequest;
+import com.cargofy.backend.dto.UserOptionResponse;
+import com.cargofy.backend.model.Role;
 import com.cargofy.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -33,5 +39,12 @@ public class UserController {
                                                Authentication authentication) {
         userService.changePassword(id, authentication.getName(), request);
         return ResponseEntity.noContent().build();
+    }
+
+    
+    @GetMapping
+    @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
+    public ResponseEntity<List<UserOptionResponse>> listUsersByRole(@RequestParam Role role) {
+        return ResponseEntity.ok(userService.listUsersByRole(role));
     }
 }
