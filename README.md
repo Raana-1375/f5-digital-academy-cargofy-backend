@@ -85,96 +85,11 @@ To try it, register a user (`CLIENT` or `OPERATOR`) with `POST /api/auth/registe
 
 ### Entity-relationship diagram
 
-```mermaid
-erDiagram
-    USER ||--o{ SHIPMENT : "is client of"
-    USER ||--o{ SHIPMENT : "is operator of"
-    SHIPMENT ||--o{ STATUS_HISTORY : has
-    USER ||--o{ STATUS_HISTORY : updates
-
-    USER {
-        Long id PK
-        String name
-        String email
-        String password
-        Enum role
-        String companyName
-    }
-    SHIPMENT {
-        Long id PK
-        String trackingNumber
-        String origin
-        String destination
-        Enum status
-        DateTime createdDate
-        DateTime estimatedDelivery
-        String note
-        Long client_id FK
-        Long assignedOperator_id FK
-    }
-    STATUS_HISTORY {
-        Long id PK
-        Long shipment_id FK
-        Enum status
-        DateTime updatedDate
-        Long updatedBy_id FK
-        String note
-    }
-```
+![Entity-relationship diagram](docs/er-diagram.png)
 
 ### Class diagram
 
-```mermaid
-classDiagram
-    class User {
-        -Long id
-        -String name
-        -String email
-        -String password
-        -Role role
-        -String companyName
-    }
-    class Shipment {
-        -Long id
-        -String trackingNumber
-        -String origin
-        -String destination
-        -ShipmentStatus status
-        -DateTime createdDate
-        -DateTime estimatedDelivery
-        -String note
-        -User client
-        -User assignedOperator
-    }
-    class StatusHistory {
-        -Long id
-        -Shipment shipment
-        -ShipmentStatus status
-        -DateTime updatedDate
-        -User updatedBy
-        -String note
-    }
-    class Role {
-        <<enumeration>>
-        ADMIN
-        OPERATOR
-        CLIENT
-    }
-    class ShipmentStatus {
-        <<enumeration>>
-        PREPARING
-        CUSTOMS
-        IN_TRANSIT
-        DELIVERED
-    }
-    User "1" --> "0..*" Shipment : client
-    User "1" --> "0..*" Shipment : operator
-    Shipment "1" --> "0..*" StatusHistory : has
-    User "1" --> "0..*" StatusHistory : updatedBy
-    User ..> Role
-    Shipment ..> ShipmentStatus
-    StatusHistory ..> ShipmentStatus
-```
+![Class diagram](docs/class-diagram.png)
 
 ## Endpoints
 
@@ -265,7 +180,7 @@ Unit tests (services) and integration tests (endpoints) are being added.
 - MySQL 8.0 and Docker
 - Maven and Lombok
 - Visual Studio Code
-- Jira (project planning), Figma (design), draw.io and Mermaid (diagrams)
+- Jira (project planning), Figma (design), draw.io (diagrams)
 
 ## Known Issues
 
