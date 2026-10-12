@@ -198,7 +198,7 @@ Unit tests (services) and integration tests (endpoints) are being added.
 ## Project Links
 
 - Frontend repository: [f5-digital-academy-cargofy-frontend](https://github.com/Raana-1375/f5-digital-academy-cargofy-frontend)
-- Presentation: _link coming soon_
+- Presentation: [Cargofy: International Shipment Tracking](https://docs.google.com/presentation/d/1ifoP8ygg_owgahdYdwbB6ORx43TXUn2bFTWZ2L6Jzi0/edit?usp=sharing)
 
 ## Author
 
