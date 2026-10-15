@@ -30,12 +30,13 @@ public class ShipmentController {
         return ResponseEntity.ok(shipmentService.createShipment(request));
     }
 
-    @GetMapping
+        @GetMapping
     public ResponseEntity<List<ShipmentResponse>> listShipments(
             @RequestParam(required = false) ShipmentStatus status,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(shipmentService.listShipments(status, page, size));
+        return ResponseEntity.ok(shipmentService.listShipments(status, search, page, size));
     }
 
     @GetMapping("/{id}")
