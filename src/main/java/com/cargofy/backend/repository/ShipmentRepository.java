@@ -12,7 +12,10 @@ import java.util.Optional;
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     Optional<Shipment> findByTrackingNumber(String trackingNumber);
     Page<Shipment> findByStatus(ShipmentStatus status, Pageable pageable);
-    
+    Page<Shipment> findByTrackingNumberContainingIgnoreCase(String search, Pageable pageable);
+    Page<Shipment> findByStatusAndTrackingNumberContainingIgnoreCase(
+            ShipmentStatus status, String search, Pageable pageable);
+
     long countByStatus(ShipmentStatus status);
 
     long countByClientId(Long clientId);
