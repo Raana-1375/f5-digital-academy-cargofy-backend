@@ -15,6 +15,7 @@ import com.cargofy.backend.repository.StatusHistoryRepository;
 import com.cargofy.backend.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,12 +66,23 @@ public class ShipmentService {
         return toShipmentResponse(shipment);
     }
 
-    @Transactional(readOnly = true)
-    public List<ShipmentResponse> listShipments(ShipmentStatus status, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Shipment> shipments = (status != null)
-                ? shipmentRepository.findByStatus(status, pageable)
-                : shipmentRepository.findAll(pageable);
+        @Transactional(readOnly = true)
+        public List<ShipmentResponse> listShipments(ShipmentStatus status, String search, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDate"));
+        boolean hasSearch = search != null && !search.isBlank();
+        String term = hasSearch ? search.trim() : null;
+
+        Page<Shipment> shipments;
+        if (status != null && hasSearch) {
+            shipments = shipmentRepository
+                    .findByStatusAndTrackingNumberContainingIgnoreCase(status, term, pageable);
+        } else if (status != null) {
+            shipments = shipmentRepository.findByStatus(status, pageable);
+        } else if (hasSearch) {
+            shipments = shipmentRepository.findByTrackingNumberContainingIgnoreCase(term, pageable);
+        } else {
+            shipments = shipmentRepository.findAll(pageable);
+        }
 
         return shipments.getContent().stream()
                 .map(this::toShipmentResponse)
