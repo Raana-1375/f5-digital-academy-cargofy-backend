@@ -6,6 +6,7 @@ import com.cargofy.backend.dto.ShipmentResponse;
 import com.cargofy.backend.dto.StatusHistoryResponse;
 import com.cargofy.backend.dto.UpdateStatusRequest;
 import com.cargofy.backend.exception.ResourceNotFoundException;
+import com.cargofy.backend.model.Role;
 import com.cargofy.backend.model.Shipment;
 import com.cargofy.backend.model.ShipmentStatus;
 import com.cargofy.backend.model.StatusHistory;
@@ -66,14 +67,31 @@ public class ShipmentService {
         return toShipmentResponse(shipment);
     }
 
-        @Transactional(readOnly = true)
-        public List<ShipmentResponse> listShipments(ShipmentStatus status, String search, int page, int size) {
+    // Clients only see their own shipments; operators and admins see all of them.
+    @Transactional(readOnly = true)
+    public List<ShipmentResponse> listShipments(ShipmentStatus status, String search,
+                                                int page, int size, String currentEmail) {
+        User currentUser = findUserByEmail(currentEmail);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDate"));
         boolean hasSearch = search != null && !search.isBlank();
         String term = hasSearch ? search.trim() : null;
 
         Page<Shipment> shipments;
-        if (status != null && hasSearch) {
+        if (currentUser.getRole() == Role.CLIENT) {
+            Long clientId = currentUser.getId();
+            if (status != null && hasSearch) {
+                shipments = shipmentRepository
+                        .findByClientIdAndStatusAndTrackingNumberContainingIgnoreCase(
+                                clientId, status, term, pageable);
+            } else if (status != null) {
+                shipments = shipmentRepository.findByClientIdAndStatus(clientId, status, pageable);
+            } else if (hasSearch) {
+                shipments = shipmentRepository
+                        .findByClientIdAndTrackingNumberContainingIgnoreCase(clientId, term, pageable);
+            } else {
+                shipments = shipmentRepository.findByClientId(clientId, pageable);
+            }
+        } else if (status != null && hasSearch) {
             shipments = shipmentRepository
                     .findByStatusAndTrackingNumberContainingIgnoreCase(status, term, pageable);
         } else if (status != null) {
@@ -89,10 +107,16 @@ public class ShipmentService {
                 .toList();
     }
 
+    // A client asking for someone else's shipment gets "not found", so its existence is not revealed.
     @Transactional(readOnly = true)
-    public ShipmentDetailResponse getShipmentDetail(Long id) {
+    public ShipmentDetailResponse getShipmentDetail(Long id, String currentEmail) {
+        User currentUser = findUserByEmail(currentEmail);
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipment not found"));
+
+        if (currentUser.getRole() == Role.CLIENT && !isOwnedBy(shipment, currentUser)) {
+            throw new ResourceNotFoundException("Shipment not found");
+        }
 
         List<StatusHistoryResponse> historyResponse = statusHistoryRepository
                 .findByShipmentIdOrderByUpdatedDateAsc(id)
@@ -139,6 +163,15 @@ public class ShipmentService {
         statusHistoryRepository.save(history);
 
         return toShipmentResponse(shipment);
+    }
+
+    private User findUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private boolean isOwnedBy(Shipment shipment, User user) {
+        return shipment.getClient() != null && shipment.getClient().getId().equals(user.getId());
     }
 
     private ShipmentResponse toShipmentResponse(Shipment shipment) {

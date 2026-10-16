@@ -24,24 +24,27 @@ public class ShipmentController {
         this.shipmentService = shipmentService;
     }
 
-        @PostMapping
+    @PostMapping
     @PreAuthorize("hasAnyRole('OPERATOR', 'ADMIN')")
     public ResponseEntity<ShipmentResponse> createShipment(@Valid @RequestBody CreateShipmentRequest request) {
         return ResponseEntity.ok(shipmentService.createShipment(request));
     }
 
-        @GetMapping
+    @GetMapping
     public ResponseEntity<List<ShipmentResponse>> listShipments(
             @RequestParam(required = false) ShipmentStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(shipmentService.listShipments(status, search, page, size));
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                shipmentService.listShipments(status, search, page, size, authentication.getName()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ShipmentDetailResponse> getShipmentDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(shipmentService.getShipmentDetail(id));
+    public ResponseEntity<ShipmentDetailResponse> getShipmentDetail(@PathVariable Long id,
+                                                                    Authentication authentication) {
+        return ResponseEntity.ok(shipmentService.getShipmentDetail(id, authentication.getName()));
     }
 
     @PostMapping("/{id}/status")

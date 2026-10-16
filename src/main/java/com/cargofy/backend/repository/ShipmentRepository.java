@@ -16,6 +16,13 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     Page<Shipment> findByStatusAndTrackingNumberContainingIgnoreCase(
             ShipmentStatus status, String search, Pageable pageable);
 
+    Page<Shipment> findByClientId(Long clientId, Pageable pageable);
+    Page<Shipment> findByClientIdAndStatus(Long clientId, ShipmentStatus status, Pageable pageable);
+    Page<Shipment> findByClientIdAndTrackingNumberContainingIgnoreCase(
+            Long clientId, String search, Pageable pageable);
+    Page<Shipment> findByClientIdAndStatusAndTrackingNumberContainingIgnoreCase(
+            Long clientId, ShipmentStatus status, String search, Pageable pageable);
+
     long countByStatus(ShipmentStatus status);
 
     long countByClientId(Long clientId);
