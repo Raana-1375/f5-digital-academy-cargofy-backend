@@ -29,13 +29,19 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
-                       JwtService jwtService,
-                       CustomUserDetailsService userDetailsService,
-                       PasswordEncoder passwordEncoder) {
+            JwtService jwtService,
+            CustomUserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    public UserResponse getCurrentUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return toUserResponse(user);
     }
 
     public UpdateProfileResponse updateProfile(Long id, String currentEmail, UpdateUserRequest request) {
@@ -83,7 +89,7 @@ public class UserService {
         userRepository.save(currentUser);
     }
 
-        public List<UserOptionResponse> listUsersByRole(Role role) {
+    public List<UserOptionResponse> listUsersByRole(Role role) {
         return userRepository.findByRole(role).stream()
                 .map(user -> new UserOptionResponse(user.getId(), user.getName(), user.getCompanyName()))
                 .toList();
@@ -95,7 +101,6 @@ public class UserService {
                 user.getName(),
                 user.getEmail(),
                 user.getRole().name(),
-                user.getCompanyName()
-        );
+                user.getCompanyName());
     }
 }
