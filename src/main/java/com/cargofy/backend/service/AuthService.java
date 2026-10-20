@@ -5,38 +5,58 @@ import com.cargofy.backend.dto.LoginRequest;
 import com.cargofy.backend.dto.RegisterRequest;
 import com.cargofy.backend.exception.BadRequestException;
 import com.cargofy.backend.exception.ConflictException;
+import com.cargofy.backend.exception.ForbiddenException;
 import com.cargofy.backend.exception.ResourceNotFoundException;
 import com.cargofy.backend.model.Role;
 import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.UserRepository;
 import com.cargofy.backend.security.JwtService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @Service
 public class AuthService {
+
+    private static final String OPERATOR_COMPANY = "Cargofy";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final String operatorAccessCode;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       @Value("${cargofy.operator-access-code:}") String operatorAccessCode) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.operatorAccessCode = operatorAccessCode;
     }
 
     public AuthResponse register(RegisterRequest request) {
         if (request.getRole() == Role.ADMIN) {
             throw new BadRequestException("Admin accounts cannot be created through registration");
+        }
+
+        if (request.getRole() == Role.OPERATOR && !isValidOperatorAccessCode(request.getOperatorAccessCode())) {
+            throw new ForbiddenException("Invalid operator access code");
+        }
+
+        if (request.getRole() == Role.OPERATOR
+                && (request.getCompanyName() == null
+                || !OPERATOR_COMPANY.equalsIgnoreCase(request.getCompanyName().trim()))) {
+            throw new BadRequestException("Operators must belong to " + OPERATOR_COMPANY);
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -48,7 +68,9 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
-        user.setCompanyName(request.getCompanyName());
+        user.setCompanyName(request.getRole() == Role.OPERATOR
+                ? OPERATOR_COMPANY
+                : request.getCompanyName());
         userRepository.save(user);
 
         return buildAuthResponse(user);
@@ -63,6 +85,17 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return buildAuthResponse(user);
+    }
+
+    // Operator registration is closed when no code is configured.
+    // Constant-time comparison avoids leaking the code through timing.
+    private boolean isValidOperatorAccessCode(String provided) {
+        if (operatorAccessCode == null || operatorAccessCode.isBlank() || provided == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                operatorAccessCode.getBytes(StandardCharsets.UTF_8),
+                provided.getBytes(StandardCharsets.UTF_8));
     }
 
     private AuthResponse buildAuthResponse(User user) {

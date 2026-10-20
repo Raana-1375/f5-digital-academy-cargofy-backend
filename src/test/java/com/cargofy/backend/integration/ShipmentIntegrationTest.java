@@ -38,18 +38,20 @@ class ShipmentIntegrationTest {
     }
 
     private String register(String name, String email, String role) throws Exception {
+        String company = "OPERATOR".equals(role) ? "Cargofy" : "Test Co";
         String json = """
                 {
                   "name": "%s",
                   "email": "%s",
                   "password": "Test12345",
                   "role": "%s",
-                  "companyName": "Test Co"
+                  "companyName": "%s",
+                  "operatorAccessCode": "test-operator-code"
                 }
-                """.formatted(name, email, role);
+                """.formatted(name, email, role, company);
         String body = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return find(body, "\"token\"\\s*:\\s*\"([^\"]+)\"");
@@ -57,7 +59,7 @@ class ShipmentIntegrationTest {
 
     private long userId(String token) throws Exception {
         String body = mockMvc.perform(get("/api/users/me")
-                        .header("Authorization", bearer(token)))
+                .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return Long.parseLong(find(body, "\"id\"\\s*:\\s*(\\d+)"));
@@ -77,9 +79,9 @@ class ShipmentIntegrationTest {
                 }
                 """.formatted(origin, clientId);
         return mockMvc.perform(post("/api/shipments")
-                        .header("Authorization", bearer(operatorToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                .header("Authorization", bearer(operatorToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
     }
@@ -90,9 +92,9 @@ class ShipmentIntegrationTest {
 
     private void updateStatus(String token, long shipmentId, String status) throws Exception {
         mockMvc.perform(post("/api/shipments/" + shipmentId + "/status")
-                        .header("Authorization", bearer(token))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"" + status + "\", \"note\": \"Updated in test\"}"))
+                .header("Authorization", bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"" + status + "\", \"note\": \"Updated in test\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -106,9 +108,9 @@ class ShipmentIntegrationTest {
         long clientId = userId(client);
 
         mockMvc.perform(post("/api/shipments")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\", \"clientId\": " + clientId + "}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\", \"clientId\": " + clientId + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.trackingNumber", startsWith("TRK-")))
                 .andExpect(jsonPath("$.status").value("PREPARING"))
@@ -122,9 +124,9 @@ class ShipmentIntegrationTest {
         String client = register("Client One", "client1@cargofy.com", "CLIENT");
 
         mockMvc.perform(post("/api/shipments")
-                        .header("Authorization", bearer(client))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\"}"))
+                .header("Authorization", bearer(client))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -134,9 +136,9 @@ class ShipmentIntegrationTest {
         String operator = register("Operator One", "op1@cargofy.com", "OPERATOR");
 
         mockMvc.perform(post("/api/shipments")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"destination\": \"Berlin\"}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destination\": \"Berlin\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -146,9 +148,9 @@ class ShipmentIntegrationTest {
         String operator = register("Operator One", "op1@cargofy.com", "OPERATOR");
 
         mockMvc.perform(post("/api/shipments")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\", \"clientId\": 999999}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"origin\": \"Madrid\", \"destination\": \"Berlin\", \"clientId\": 999999}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -194,8 +196,8 @@ class ShipmentIntegrationTest {
         updateStatus(operator, second, "CUSTOMS");
 
         mockMvc.perform(get("/api/shipments")
-                        .param("status", "CUSTOMS")
-                        .header("Authorization", bearer(operator)))
+                .param("status", "CUSTOMS")
+                .header("Authorization", bearer(operator)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].origin").value("Paris"));
@@ -212,8 +214,8 @@ class ShipmentIntegrationTest {
         String trackingNumber = find(created, "\"trackingNumber\"\\s*:\\s*\"([^\"]+)\"");
 
         mockMvc.perform(get("/api/shipments")
-                        .param("search", trackingNumber.toLowerCase())
-                        .header("Authorization", bearer(operator)))
+                .param("search", trackingNumber.toLowerCase())
+                .header("Authorization", bearer(operator)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].trackingNumber").value(trackingNumber));
@@ -266,9 +268,9 @@ class ShipmentIntegrationTest {
         long id = shipmentId(createShipment(operator, userId(client), "Madrid"));
 
         mockMvc.perform(post("/api/shipments/" + id + "/status")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"IN_TRANSIT\", \"note\": \"Left the warehouse\"}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"IN_TRANSIT\", \"note\": \"Left the warehouse\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("IN_TRANSIT"));
 
@@ -287,9 +289,9 @@ class ShipmentIntegrationTest {
         long id = shipmentId(createShipment(operator, userId(client), "Madrid"));
 
         mockMvc.perform(post("/api/shipments/" + id + "/status")
-                        .header("Authorization", bearer(client))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"DELIVERED\"}"))
+                .header("Authorization", bearer(client))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"DELIVERED\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -301,9 +303,9 @@ class ShipmentIntegrationTest {
         long id = shipmentId(createShipment(operator, userId(client), "Madrid"));
 
         mockMvc.perform(post("/api/shipments/" + id + "/status")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"FLYING\"}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"FLYING\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -315,9 +317,9 @@ class ShipmentIntegrationTest {
         long id = shipmentId(createShipment(operator, userId(client), "Madrid"));
 
         mockMvc.perform(post("/api/shipments/" + id + "/status")
-                        .header("Authorization", bearer(operator))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"note\": \"No status given\"}"))
+                .header("Authorization", bearer(operator))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": \"No status given\"}"))
                 .andExpect(status().isBadRequest());
     }
 }
