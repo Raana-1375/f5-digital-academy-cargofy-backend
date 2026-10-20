@@ -5,16 +5,17 @@ import com.cargofy.backend.dto.LoginRequest;
 import com.cargofy.backend.dto.RegisterRequest;
 import com.cargofy.backend.exception.BadRequestException;
 import com.cargofy.backend.exception.ConflictException;
+import com.cargofy.backend.exception.ForbiddenException;
 import com.cargofy.backend.exception.ResourceNotFoundException;
 import com.cargofy.backend.model.Role;
 import com.cargofy.backend.model.User;
 import com.cargofy.backend.repository.UserRepository;
 import com.cargofy.backend.security.JwtService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,6 +39,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
+    private static final String OPERATOR_CODE = "test-operator-code";
+
     @Mock
     private UserRepository userRepository;
 
@@ -50,16 +53,27 @@ class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
-    @InjectMocks
     private AuthService authService;
 
+    @BeforeEach
+    void setUp() {
+        authService = new AuthService(userRepository, passwordEncoder, jwtService,
+                authenticationManager, OPERATOR_CODE);
+    }
+
+    // Operators get a valid access code and the Cargofy company by default.
     private RegisterRequest registerRequest(Role role) {
         RegisterRequest request = new RegisterRequest();
         request.setName("Test User");
         request.setEmail("test@cargofy.com");
         request.setPassword("Test12345");
         request.setRole(role);
-        request.setCompanyName("Test Co");
+        if (role == Role.OPERATOR) {
+            request.setCompanyName("Cargofy");
+            request.setOperatorAccessCode(OPERATOR_CODE);
+        } else {
+            request.setCompanyName("Test Co");
+        }
         return request;
     }
 
@@ -138,6 +152,86 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any());
         verifyNoInteractions(passwordEncoder);
+    }
+
+    // ---------- register: operator access code ----------
+
+    @Test
+    @DisplayName("operator registration with a wrong access code is forbidden and saves nothing")
+    void register_operatorWrongCode_throwsForbidden() {
+        RegisterRequest request = registerRequest(Role.OPERATOR);
+        request.setOperatorAccessCode("wrong-code");
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class,
+                () -> authService.register(request));
+
+        assertEquals("Invalid operator access code", ex.getMessage());
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("operator registration without an access code is forbidden")
+    void register_operatorMissingCode_throwsForbidden() {
+        RegisterRequest request = registerRequest(Role.OPERATOR);
+        request.setOperatorAccessCode(null);
+
+        assertThrows(ForbiddenException.class, () -> authService.register(request));
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("operator registration is closed when no access code is configured")
+    void register_operatorCodeNotConfigured_throwsForbidden() {
+        AuthService closedService = new AuthService(userRepository, passwordEncoder, jwtService,
+                authenticationManager, "");
+        RegisterRequest request = registerRequest(Role.OPERATOR);
+        request.setOperatorAccessCode("");
+
+        assertThrows(ForbiddenException.class, () -> closedService.register(request));
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("operator registration with another company is rejected")
+    void register_operatorOtherCompany_throwsBadRequest() {
+        RegisterRequest request = registerRequest(Role.OPERATOR);
+        request.setCompanyName("Other Co");
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.register(request));
+
+        assertEquals("Operators must belong to Cargofy", ex.getMessage());
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("operator company is stored as Cargofy whatever the letter case")
+    void register_operatorCompanyIsNormalized() {
+        RegisterRequest request = registerRequest(Role.OPERATOR);
+        request.setCompanyName("  CARGOFY ");
+        when(userRepository.existsByEmail("test@cargofy.com")).thenReturn(false);
+        when(passwordEncoder.encode("Test12345")).thenReturn("encoded-password");
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+
+        authService.register(request);
+
+        ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(savedUser.capture());
+        assertEquals("Cargofy", savedUser.getValue().getCompanyName());
+    }
+
+    @Test
+    @DisplayName("clients do not need an access code")
+    void register_clientWithoutCode_isAllowed() {
+        when(userRepository.existsByEmail("test@cargofy.com")).thenReturn(false);
+        when(passwordEncoder.encode("Test12345")).thenReturn("encoded-password");
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+
+        AuthResponse response = authService.register(registerRequest(Role.CLIENT));
+
+        assertEquals("CLIENT", response.getRole());
     }
 
     // ---------- login ----------
