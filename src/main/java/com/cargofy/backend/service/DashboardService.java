@@ -73,7 +73,9 @@ public class DashboardService {
                 shipment.getQuantity(),
                 shipment.getWeightKg(),
                 shipment.getGoodsDescription(),
-                shipment.getEstimatedPrice()
+                shipment.getEstimatedPrice(),
+                shipment.getDangerousGoods(),
+                shipment.getHsCode()
         );
     }
 }

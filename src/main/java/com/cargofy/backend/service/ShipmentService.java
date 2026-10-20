@@ -55,6 +55,8 @@ public class ShipmentService {
         shipment.setQuantity(request.getQuantity());
         shipment.setWeightKg(request.getWeightKg());
         shipment.setGoodsDescription(request.getGoodsDescription());
+        shipment.setDangerousGoods(request.isDangerousGoods());
+        shipment.setHsCode(request.getHsCode());
         shipment.setEstimatedPrice(PriceEstimator.estimate(
                 request.getTransportMode(),
                 request.getPackageType(),
@@ -156,6 +158,8 @@ public class ShipmentService {
                 shipment.getWeightKg(),
                 shipment.getGoodsDescription(),
                 shipment.getEstimatedPrice(),
+                shipment.getDangerousGoods(),
+                shipment.getHsCode(),
                 historyResponse
         );
     }
@@ -207,7 +211,9 @@ public class ShipmentService {
                 shipment.getQuantity(),
                 shipment.getWeightKg(),
                 shipment.getGoodsDescription(),
-                shipment.getEstimatedPrice()
+                shipment.getEstimatedPrice(),
+                shipment.getDangerousGoods(),
+                shipment.getHsCode()
         );
     }
 }
