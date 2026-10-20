@@ -25,4 +25,7 @@ public class RegisterRequest {
     private Role role;
 
     private String companyName;
+
+    // Only required when role is OPERATOR
+    private String operatorAccessCode;
 }
