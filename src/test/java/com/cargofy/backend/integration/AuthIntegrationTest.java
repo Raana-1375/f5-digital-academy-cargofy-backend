@@ -26,19 +26,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AuthIntegrationTest {
 
+    // Matches cargofy.operator-access-code in application-test.properties
+    private static final String OPERATOR_CODE = "test-operator-code";
+
     @Autowired
     private MockMvc mockMvc;
 
-    private String registerJson(String email, String password, String role) {
+    // A null code leaves the field out of the request body.
+    private String registerJson(String email, String password, String role, String company, String code) {
+        String codeField = code == null ? "" : ",\n  \"operatorAccessCode\": \"" + code + "\"";
         return """
                 {
                   "name": "Test User",
                   "email": "%s",
                   "password": "%s",
                   "role": "%s",
-                  "companyName": "Test Co"
+                  "companyName": "%s"%s
                 }
-                """.formatted(email, password, role);
+                """.formatted(email, password, role, company, codeField);
+    }
+
+    private String registerJson(String email, String password, String role) {
+        String company = "OPERATOR".equals(role) ? "Cargofy" : "Test Co";
+        return registerJson(email, password, role, company, OPERATOR_CODE);
     }
 
     private String loginJson(String email, String password) {
@@ -94,6 +104,49 @@ class AuthIntegrationTest {
                         .content(registerJson("short@cargofy.com", "123", "CLIENT")))
                 .andExpect(status().isBadRequest());
     }
+
+    // ---------- operator registration ----------
+
+    @Test
+    @DisplayName("operator with the right access code and company is created")
+    void register_operatorWithValidCode_returnsOk() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("op@cargofy.com", "Test12345", "OPERATOR", "cargofy", OPERATOR_CODE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("OPERATOR"));
+    }
+
+    @Test
+    @DisplayName("operator with a wrong access code returns 403")
+    void register_operatorWithWrongCode_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("op@cargofy.com", "Test12345", "OPERATOR", "Cargofy", "wrong-code")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Invalid operator access code"));
+    }
+
+    @Test
+    @DisplayName("operator without an access code returns 403")
+    void register_operatorWithoutCode_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("op@cargofy.com", "Test12345", "OPERATOR", "Cargofy", null)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("operator with another company returns 400")
+    void register_operatorWithOtherCompany_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("op@cargofy.com", "Test12345", "OPERATOR", "Other Co", OPERATOR_CODE)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Operators must belong to Cargofy"));
+    }
+
+    // ---------- login and protected endpoints ----------
 
     @Test
     @DisplayName("login with correct credentials returns a token")
