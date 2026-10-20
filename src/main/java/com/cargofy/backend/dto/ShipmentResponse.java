@@ -28,4 +28,6 @@ public class ShipmentResponse {
     private BigDecimal weightKg;
     private String goodsDescription;
     private BigDecimal estimatedPrice;
+    private Boolean dangerousGoods;
+    private String hsCode;
 }

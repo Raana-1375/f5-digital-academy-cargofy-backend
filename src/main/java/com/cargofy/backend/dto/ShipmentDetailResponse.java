@@ -29,5 +29,7 @@ public class ShipmentDetailResponse {
     private BigDecimal weightKg;
     private String goodsDescription;
     private BigDecimal estimatedPrice;
+    private Boolean dangerousGoods;
+    private String hsCode;
     private List<StatusHistoryResponse> history;
 }
