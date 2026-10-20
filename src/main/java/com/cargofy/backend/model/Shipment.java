@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,9 +35,29 @@ public class Shipment {
     private LocalDateTime createdDate;
 
     private LocalDateTime estimatedDelivery;
-    
+
     @Column(length = 300)
     private String note;
+
+    // Cargo details. Nullable in the database so shipments created before
+    // these columns existed stay valid; the API requires them for new shipments.
+    @Enumerated(EnumType.STRING)
+    private TransportMode transportMode;
+
+    @Enumerated(EnumType.STRING)
+    private PackageType packageType;
+
+    private Integer quantity;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal weightKg;
+
+    @Column(length = 200)
+    private String goodsDescription;
+
+    // Indicative price calculated with the demo tariff when the shipment is created.
+    @Column(precision = 10, scale = 2)
+    private BigDecimal estimatedPrice;
 
     @ManyToOne
     @JoinColumn(name = "client_id")
