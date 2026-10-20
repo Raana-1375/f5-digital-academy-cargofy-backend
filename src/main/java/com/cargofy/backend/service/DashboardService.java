@@ -67,7 +67,15 @@ public class DashboardService {
                 shipment.getEstimatedDelivery(),
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
                 shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
-                shipment.getNote()
+                shipment.getNote(),
+                shipment.getTransportMode() != null ? shipment.getTransportMode().name() : null,
+                shipment.getPackageType() != null ? shipment.getPackageType().name() : null,
+                shipment.getQuantity(),
+                shipment.getWeightKg(),
+                shipment.getGoodsDescription(),
+                shipment.getEstimatedPrice(),
+                shipment.getDangerousGoods(),
+                shipment.getHsCode()
         );
     }
 }

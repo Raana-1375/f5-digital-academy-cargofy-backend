@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,5 +23,13 @@ public class ShipmentDetailResponse {
     private String clientName;
     private String assignedOperatorName;
     private String note;
+    private String transportMode;
+    private String packageType;
+    private Integer quantity;
+    private BigDecimal weightKg;
+    private String goodsDescription;
+    private BigDecimal estimatedPrice;
+    private Boolean dangerousGoods;
+    private String hsCode;
     private List<StatusHistoryResponse> history;
 }
