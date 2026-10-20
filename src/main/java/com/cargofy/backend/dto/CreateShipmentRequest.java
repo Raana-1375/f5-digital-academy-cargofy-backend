@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -46,4 +47,10 @@ public class CreateShipmentRequest {
 
     @Size(max = 200, message = "Goods description must be at most 200 characters")
     private String goodsDescription;
+
+    
+    private boolean dangerousGoods;
+
+    @Pattern(regexp = "^\\d{6,10}$", message = "HS code must contain 6 to 10 digits")
+    private String hsCode;
 }
