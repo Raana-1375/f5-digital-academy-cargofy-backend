@@ -32,6 +32,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cargofy.backend.dto.CreateShipmentRequest;
+import com.cargofy.backend.dto.ShipmentDetailResponse;
+import com.cargofy.backend.model.PackageType;
+import com.cargofy.backend.model.TransportMode;
+
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ExtendWith(MockitoExtension.class)
 class ShipmentServiceTest {
 
@@ -233,5 +243,80 @@ class ShipmentServiceTest {
         assertThrows(ResourceNotFoundException.class,
                 () -> shipmentService.updateStatus(99L, request, "operator@cargofy.com"));
         verify(statusHistoryRepository, never()).save(any());
+    }
+
+    
+    // ---- createShipment and cargo details ----
+
+    @Test
+    void createShipment_storesTheCargoDetailsAndCalculatesThePrice() {
+        CreateShipmentRequest request = new CreateShipmentRequest();
+        request.setOrigin("Hamburg");
+        request.setDestination("New York");
+        request.setTransportMode(TransportMode.AIR);
+        request.setPackageType(PackageType.PALLET);
+        request.setQuantity(2);
+        request.setWeightKg(new BigDecimal("100"));
+        request.setGoodsDescription("Machine parts");
+        request.setDangerousGoods(true);
+        request.setHsCode("847130");
+
+        var response = shipmentService.createShipment(request);
+
+        ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
+        verify(shipmentRepository).save(captor.capture());
+        Shipment saved = captor.getValue();
+        assertEquals(ShipmentStatus.PREPARING, saved.getStatus());
+        assertEquals(TransportMode.AIR, saved.getTransportMode());
+        assertEquals(PackageType.PALLET, saved.getPackageType());
+        assertEquals(2, saved.getQuantity());
+        assertEquals("Machine parts", saved.getGoodsDescription());
+        assertTrue(saved.getDangerousGoods());
+        assertEquals("847130", saved.getHsCode());
+        assertEquals(new BigDecimal("505.00"), saved.getEstimatedPrice());
+
+        assertEquals("AIR", response.getTransportMode());
+        assertEquals("PALLET", response.getPackageType());
+        assertEquals(new BigDecimal("505.00"), response.getEstimatedPrice());
+    }
+
+    @Test
+    void getShipmentDetail_returnsTheCargoDetails() {
+        User operator = user(2L, "Operator", Role.OPERATOR);
+        Shipment shipment = shipment(1L, null);
+        shipment.setTransportMode(TransportMode.SEA);
+        shipment.setPackageType(PackageType.BOX);
+        shipment.setQuantity(10);
+        shipment.setWeightKg(new BigDecimal("250.50"));
+        shipment.setEstimatedPrice(new BigDecimal("255.40"));
+        shipment.setDangerousGoods(false);
+        shipment.setHsCode("8471300000");
+        when(userRepository.findByEmail("operator@cargofy.com")).thenReturn(Optional.of(operator));
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(statusHistoryRepository.findByShipmentIdOrderByUpdatedDateAsc(1L)).thenReturn(List.of());
+
+        ShipmentDetailResponse detail = shipmentService.getShipmentDetail(1L, "operator@cargofy.com");
+
+        assertEquals("SEA", detail.getTransportMode());
+        assertEquals("BOX", detail.getPackageType());
+        assertEquals(10, detail.getQuantity());
+        assertEquals(new BigDecimal("250.50"), detail.getWeightKg());
+        assertEquals(new BigDecimal("255.40"), detail.getEstimatedPrice());
+        assertEquals("8471300000", detail.getHsCode());
+    }
+
+    @Test
+    void getShipmentDetail_shipmentWithoutCargoDetailsReturnsNulls() {
+        User operator = user(2L, "Operator", Role.OPERATOR);
+        when(userRepository.findByEmail("operator@cargofy.com")).thenReturn(Optional.of(operator));
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment(1L, null)));
+        when(statusHistoryRepository.findByShipmentIdOrderByUpdatedDateAsc(1L)).thenReturn(List.of());
+
+        ShipmentDetailResponse detail = shipmentService.getShipmentDetail(1L, "operator@cargofy.com");
+
+        assertNull(detail.getTransportMode());
+        assertNull(detail.getPackageType());
+        assertNull(detail.getEstimatedPrice());
+        assertNull(detail.getDangerousGoods());
     }
 }

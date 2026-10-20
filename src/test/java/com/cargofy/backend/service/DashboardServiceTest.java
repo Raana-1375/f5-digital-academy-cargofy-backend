@@ -29,6 +29,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.cargofy.backend.model.PackageType;
+import com.cargofy.backend.model.TransportMode;
+
+import java.math.BigDecimal;
+
 @ExtendWith(MockitoExtension.class)
 class DashboardServiceTest {
 
@@ -161,5 +166,32 @@ class DashboardServiceTest {
                 () -> dashboardService.getSummary("ghost@cargofy.com"));
 
         verifyNoInteractions(shipmentRepository);
+    }
+
+    
+    @Test
+    @DisplayName("recent shipments carry the cargo details and the estimated price")
+    void getSummary_mapsCargoDetails() {
+        User operator = user(2L, "operator@cargofy.com", Role.OPERATOR);
+        Shipment cargo = shipment(1L, "TRK-AAAA1111", ShipmentStatus.PREPARING);
+        cargo.setTransportMode(TransportMode.AIR);
+        cargo.setPackageType(PackageType.BOX);
+        cargo.setQuantity(4);
+        cargo.setWeightKg(new BigDecimal("12.50"));
+        cargo.setEstimatedPrice(new BigDecimal("93.25"));
+        cargo.setDangerousGoods(true);
+        cargo.setHsCode("847130");
+        when(userRepository.findByEmail("operator@cargofy.com")).thenReturn(Optional.of(operator));
+        when(shipmentRepository.findTop5ByOrderByCreatedDateDesc()).thenReturn(List.of(cargo));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary("operator@cargofy.com");
+
+        var recent = summary.getRecentShipments().get(0);
+        assertEquals("AIR", recent.getTransportMode());
+        assertEquals("BOX", recent.getPackageType());
+        assertEquals(4, recent.getQuantity());
+        assertEquals(new BigDecimal("93.25"), recent.getEstimatedPrice());
+        assertTrue(recent.getDangerousGoods());
+        assertEquals("847130", recent.getHsCode());
     }
 }
