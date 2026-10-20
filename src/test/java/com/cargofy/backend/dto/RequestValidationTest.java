@@ -12,6 +12,11 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cargofy.backend.model.PackageType;
+import com.cargofy.backend.model.TransportMode;
+
+import java.math.BigDecimal;
+
 class RequestValidationTest {
 
     private static final Validator validator =
@@ -157,10 +162,16 @@ class RequestValidationTest {
 
     // ---- CreateShipmentRequest ----
 
+        // ---- CreateShipmentRequest ----
+
     private CreateShipmentRequest validShipment() {
         CreateShipmentRequest request = new CreateShipmentRequest();
         request.setOrigin("Port of Hamburg");
         request.setDestination("Port of New York");
+        request.setTransportMode(TransportMode.SEA);
+        request.setPackageType(PackageType.PALLET);
+        request.setQuantity(2);
+        request.setWeightKg(new BigDecimal("150.5"));
         return request;
     }
 
@@ -191,5 +202,68 @@ class RequestValidationTest {
         request.setNote("a".repeat(301));
 
         assertEquals(Set.of("Note must be at most 300 characters"), messages(request));
+    }
+
+    @Test
+    void createShipmentRequest_requiresTheCargoDetails() {
+        Set<String> messages = messages(new CreateShipmentRequest());
+
+        assertTrue(messages.contains("Transport mode is required"));
+        assertTrue(messages.contains("Package type is required"));
+        assertTrue(messages.contains("Quantity is required"));
+        assertTrue(messages.contains("Weight is required"));
+    }
+
+    @Test
+    void createShipmentRequest_rejectsAQuantityBelowOne() {
+        CreateShipmentRequest request = validShipment();
+        request.setQuantity(0);
+
+        assertEquals(Set.of("Quantity must be at least 1"), messages(request));
+    }
+
+    @Test
+    void createShipmentRequest_rejectsAWeightOfZero() {
+        CreateShipmentRequest request = validShipment();
+        request.setWeightKg(BigDecimal.ZERO);
+
+        assertEquals(Set.of("Weight must be greater than 0"), messages(request));
+    }
+
+    @Test
+    void createShipmentRequest_rejectsAGoodsDescriptionThatIsTooLong() {
+        CreateShipmentRequest request = validShipment();
+        request.setGoodsDescription("a".repeat(201));
+
+        assertEquals(Set.of("Goods description must be at most 200 characters"), messages(request));
+    }
+
+    @Test
+    void createShipmentRequest_hsCodeIsOptional() {
+        CreateShipmentRequest request = validShipment();
+        request.setHsCode(null);
+
+        assertTrue(messages(request).isEmpty());
+    }
+
+    @Test
+    void createShipmentRequest_acceptsHsCodesOfSixToTenDigits() {
+        CreateShipmentRequest request = validShipment();
+
+        request.setHsCode("847130");
+        assertTrue(messages(request).isEmpty());
+
+        request.setHsCode("8471300000");
+        assertTrue(messages(request).isEmpty());
+    }
+
+    @Test
+    void createShipmentRequest_rejectsInvalidHsCodes() {
+        CreateShipmentRequest request = validShipment();
+
+        for (String invalid : new String[] {"12345", "12AB56", "84713000001"}) {
+            request.setHsCode(invalid);
+            assertEquals(Set.of("HS code must contain 6 to 10 digits"), messages(request));
+        }
     }
 }
