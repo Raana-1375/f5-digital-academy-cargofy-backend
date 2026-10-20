@@ -50,6 +50,16 @@ public class ShipmentService {
         shipment.setCreatedDate(LocalDateTime.now());
         shipment.setEstimatedDelivery(request.getEstimatedDelivery());
         shipment.setNote(request.getNote());
+        shipment.setTransportMode(request.getTransportMode());
+        shipment.setPackageType(request.getPackageType());
+        shipment.setQuantity(request.getQuantity());
+        shipment.setWeightKg(request.getWeightKg());
+        shipment.setGoodsDescription(request.getGoodsDescription());
+        shipment.setEstimatedPrice(PriceEstimator.estimate(
+                request.getTransportMode(),
+                request.getPackageType(),
+                request.getQuantity(),
+                request.getWeightKg()));
 
         if (request.getClientId() != null) {
             User client = userRepository.findById(request.getClientId())
@@ -140,6 +150,12 @@ public class ShipmentService {
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
                 shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
                 shipment.getNote(),
+                shipment.getTransportMode() != null ? shipment.getTransportMode().name() : null,
+                shipment.getPackageType() != null ? shipment.getPackageType().name() : null,
+                shipment.getQuantity(),
+                shipment.getWeightKg(),
+                shipment.getGoodsDescription(),
+                shipment.getEstimatedPrice(),
                 historyResponse
         );
     }
@@ -185,7 +201,13 @@ public class ShipmentService {
                 shipment.getEstimatedDelivery(),
                 shipment.getClient() != null ? shipment.getClient().getName() : null,
                 shipment.getAssignedOperator() != null ? shipment.getAssignedOperator().getName() : null,
-                shipment.getNote()
+                shipment.getNote(),
+                shipment.getTransportMode() != null ? shipment.getTransportMode().name() : null,
+                shipment.getPackageType() != null ? shipment.getPackageType().name() : null,
+                shipment.getQuantity(),
+                shipment.getWeightKg(),
+                shipment.getGoodsDescription(),
+                shipment.getEstimatedPrice()
         );
     }
 }
