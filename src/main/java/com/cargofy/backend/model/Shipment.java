@@ -51,6 +51,13 @@ public class Shipment {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal weightKg;
+    
+    // Dangerous goods flag; null on shipments created before this field existed.
+    private Boolean dangerousGoods;
+
+    // Harmonized System (customs tariff) code, 6 to 10 digits.
+    @Column(length = 10)
+    private String hsCode;
 
     @Column(length = 200)
     private String goodsDescription;
